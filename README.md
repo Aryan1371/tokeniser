@@ -1,5 +1,10 @@
 # NeuroParse Studio — LLM Tokenizer & Latent Space Explorer
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-GitHub_Pages-6366f1?style=for-the-badge&logo=github)](https://aryan1371.github.io/tokeniser/)
+[![GitHub Repo](https://img.shields.io/badge/Repository-Aryan1371%2Ftokeniser-06b6d4?style=for-the-badge&logo=github)](https://github.com/Aryan1371/tokeniser)
+
+🌐 **Live Demo Website**: [https://aryan1371.github.io/tokeniser/](https://aryan1371.github.io/tokeniser/)
+
 **NeuroParse Studio** is a comprehensive, standalone educational web application designed to demonstrate the internal data pipelines powering modern Large Language Models (LLMs) and Transformer architectures.
 
 ---
