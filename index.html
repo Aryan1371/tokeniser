@@ -1,676 +1,766 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NeuroParse — Advanced LLM Tokenizer &amp; Latent Space Studio</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NeuroParse — Advanced LLM Tokenizer &amp; Latent Space Studio</title>
 
-<!-- External Visual Libraries -->
-<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <!-- External Visual Libraries -->
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 
-<style>
-  :root {
-    --bg-base: #0a0e17;
-    --bg-surface: #111827;
-    --bg-surface-elevated: #1a2336;
-    --bg-input: #0f172a;
-    --border-subtle: #1e293b;
-    --border-active: #4f46e5;
-    --text-main: #f1f5f9;
-    --text-muted: #94a3b8;
-    --text-dim: #64748b;
-    --brand-primary: #6366f1;
-    --brand-hover: #4f46e5;
-    --cyan-accent: #06b6d4;
-    --emerald-accent: #10b981;
-    --amber-accent: #f59e0b;
-    --rose-accent: #f43f5e;
-    --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-    --radius-sm: 6px;
-    --radius-md: 10px;
-    --radius-lg: 14px;
-    --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.45);
-  }
+  <style>
+    :root {
+      --bg-base: #0a0e17;
+      --bg-surface: #111827;
+      --bg-surface-elevated: #1a2336;
+      --bg-input: #0f172a;
+      --border-subtle: #1e293b;
+      --border-active: #4f46e5;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --brand-primary: #6366f1;
+      --brand-hover: #4f46e5;
+      --cyan-accent: #06b6d4;
+      --emerald-accent: #10b981;
+      --amber-accent: #f59e0b;
+      --rose-accent: #f43f5e;
+      --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.45);
+    }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-  body {
-    font-family: var(--font-ui);
-    background-color: var(--bg-base);
-    color: var(--text-main);
-    line-height: 1.5;
-    padding: 24px 20px 80px;
-    min-height: 100vh;
-  }
+    body {
+      font-family: var(--font-ui);
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      line-height: 1.5;
+      padding: 24px 20px 80px;
+      min-height: 100vh;
+    }
 
-  /* Ambient Canvas Background */
-  body::before {
-    content: "";
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: 
-      radial-gradient(circle at 10% 15%, rgba(99, 102, 241, 0.09) 0%, transparent 40%),
-      radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.08) 0%, transparent 45%);
-    pointer-events: none;
-    z-index: -1;
-  }
+    /* Ambient Canvas Background */
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background:
+        radial-gradient(circle at 10% 15%, rgba(99, 102, 241, 0.09) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.08) 0%, transparent 45%);
+      pointer-events: none;
+      z-index: -1;
+    }
 
-  .container {
-    max-width: 1240px;
-    margin: 0 auto;
-  }
+    .container {
+      max-width: 1240px;
+      margin: 0 auto;
+    }
 
-  /* Top Navigation & Brand */
-  header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 16px;
-    padding-bottom: 20px;
-    margin-bottom: 24px;
-    border-bottom: 1px solid var(--border-subtle);
-  }
-  .brand-group {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-  .brand-logo {
-    width: 44px;
-    height: 44px;
-    border-radius: var(--radius-md);
-    background: linear-gradient(135deg, var(--brand-primary), var(--cyan-accent));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    font-weight: 800;
-    color: #fff;
-    box-shadow: 0 0 24px rgba(99, 102, 241, 0.35);
-  }
-  h1 {
-    font-size: 24px;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    background: linear-gradient(to right, #ffffff, #cbd5e1);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  .header-desc {
-    font-size: 13.5px;
-    color: var(--text-muted);
-  }
-  .system-pills {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .pill {
-    padding: 4px 10px;
-    border-radius: 999px;
-    font-size: 11.5px;
-    font-weight: 600;
-    background: rgba(99, 102, 241, 0.12);
-    color: #a5b4fc;
-    border: 1px solid rgba(99, 102, 241, 0.25);
-  }
+    /* Top Navigation & Brand */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding-bottom: 20px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
 
-  /* Presets Bar */
-  .presets-bar {
-    background: var(--bg-surface);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-md);
-    padding: 12px 16px;
-    margin-bottom: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 12px;
-    box-shadow: var(--card-shadow);
-  }
-  .preset-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-muted);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .preset-btns {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .btn-preset {
-    background: var(--bg-surface-elevated);
-    border: 1px solid var(--border-subtle);
-    color: var(--text-main);
-    padding: 6px 12px;
-    font-size: 12px;
-    font-weight: 600;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-  .btn-preset:hover {
-    border-color: var(--brand-primary);
-    background: rgba(99, 102, 241, 0.15);
-    color: #fff;
-  }
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
 
-  /* Grid Layout */
-  .workbench-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    margin-bottom: 28px;
-  }
-  @media (max-width: 960px) {
-    .workbench-grid { grid-template-columns: 1fr; }
-  }
+    .brand-logo {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, var(--brand-primary), var(--cyan-accent));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 800;
+      color: #fff;
+      box-shadow: 0 0 24px rgba(99, 102, 241, 0.35);
+    }
 
-  /* Card Surfaces */
-  .card {
-    background: var(--bg-surface);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-lg);
-    padding: 24px;
-    box-shadow: var(--card-shadow);
-    transition: border-color 0.2s ease;
-  }
-  .card:hover {
-    border-color: rgba(99, 102, 241, 0.35);
-  }
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 18px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  }
-  .card-title {
-    font-size: 16px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .step-tag {
-    background: rgba(99, 102, 241, 0.2);
-    color: #a5b4fc;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 2px 7px;
-    border-radius: 4px;
-  }
+    h1 {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(to right, #ffffff, #cbd5e1);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
 
-  /* Form Controls */
-  label {
-    display: block;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--text-muted);
-    margin: 14px 0 6px;
-  }
-  textarea, input[type=text] {
-    width: 100%;
-    font-family: var(--font-mono);
-    font-size: 13px;
-    background: var(--bg-input);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-sm);
-    color: #e2e8f0;
-    padding: 10px 12px;
-    outline: none;
-    transition: all 0.2s ease;
-  }
-  textarea:focus, input[type=text]:focus {
-    border-color: var(--border-active);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
-    background: #131d33;
-  }
+    .header-desc {
+      font-size: 13.5px;
+      color: var(--text-muted);
+    }
 
-  /* Action Buttons */
-  .btn {
-    background: linear-gradient(135deg, var(--brand-primary), var(--brand-hover));
-    color: #ffffff;
-    border: none;
-    padding: 9px 18px;
-    font-size: 13px;
-    font-weight: 600;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    box-shadow: 0 2px 10px rgba(99, 102, 241, 0.3);
-  }
-  .btn:hover {
-    background: linear-gradient(135deg, #7175ff, #584feb);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.45);
-  }
-  .btn:active { transform: translateY(0); }
-  .btn-secondary {
-    background: var(--bg-surface-elevated);
-    border: 1px solid var(--border-subtle);
-    color: var(--text-main);
-    box-shadow: none;
-  }
-  .btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.07);
-    border-color: var(--border-active);
-  }
+    .system-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
 
-  /* Segmented Controls / Mode Pickers */
-  .mode-picker {
-    display: flex;
-    background: var(--bg-input);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-sm);
-    padding: 3px;
-    margin: 10px 0 16px;
-  }
-  .mode-btn {
-    flex: 1;
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
-    font-size: 12px;
-    font-weight: 600;
-    padding: 6px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-  .mode-btn.active {
-    background: var(--brand-primary);
-    color: #fff;
-    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.35);
-  }
+    .pill {
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11.5px;
+      font-weight: 600;
+      background: rgba(99, 102, 241, 0.12);
+      color: #a5b4fc;
+      border: 1px solid rgba(99, 102, 241, 0.25);
+    }
 
-  /* Sliders */
-  .control-panel {
-    background: var(--bg-surface-elevated);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-md);
-    padding: 14px 16px;
-    margin: 14px 0;
-  }
-  .control-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .badge-metric {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--cyan-accent);
-    background: rgba(6, 182, 212, 0.1);
-    padding: 2px 8px;
-    border-radius: var(--radius-sm);
-    border: 1px solid rgba(6, 182, 212, 0.2);
-  }
-  input[type=range] {
-    -webkit-appearance: none;
-    width: 100%;
-    height: 6px;
-    background: #1e293b;
-    border-radius: 999px;
-    outline: none;
-    margin: 10px 0 6px;
-  }
-  input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: var(--cyan-accent);
-    cursor: pointer;
-    box-shadow: 0 0 10px rgba(6, 182, 212, 0.6);
-    transition: transform 0.1s ease;
-  }
-  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+    /* Presets Bar */
+    .presets-bar {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      box-shadow: var(--card-shadow);
+    }
 
-  /* Token Chips */
-  .token-stream {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 14px;
-    background: var(--bg-input);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border-subtle);
-    min-height: 58px;
-    margin-top: 12px;
-  }
-  .token-chip {
-    padding: 6px 10px;
-    border-radius: var(--radius-sm);
-    display: inline-flex;
-    flex-direction: column;
-    align-items: center;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
-    cursor: pointer;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-    user-select: none;
-  }
-  .token-chip:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    filter: brightness(1.1);
-  }
-  .token-str {
-    font-family: var(--font-mono);
-    font-size: 13.5px;
-    font-weight: 700;
-  }
-  .token-idx {
-    font-size: 10px;
-    font-family: var(--font-mono);
-    opacity: 0.85;
-    margin-top: 2px;
-  }
+    .preset-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
 
-  /* Metric Widgets */
-  .metric-tiles {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    gap: 10px;
-    margin: 14px 0;
-  }
-  .tile {
-    background: var(--bg-surface-elevated);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-sm);
-    padding: 10px 12px;
-  }
-  .tile-title {
-    font-size: 11px;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    font-weight: 600;
-    letter-spacing: 0.03em;
-  }
-  .tile-value {
-    font-size: 18px;
-    font-weight: 800;
-    font-family: var(--font-mono);
-    color: #fff;
-    margin-top: 4px;
-  }
+    .preset-btns {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
 
-  /* Token Inspector Dialog / Drawer */
-  .inspector-card {
-    background: var(--bg-surface-elevated);
-    border: 1px solid var(--border-subtle);
-    border-left: 3px solid var(--cyan-accent);
-    border-radius: var(--radius-sm);
-    padding: 12px 14px;
-    margin-top: 12px;
-    font-size: 13px;
-  }
-  .inspector-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 4px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  }
-  .inspector-row:last-child { border-bottom: none; }
+    .btn-preset {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
 
-  /* Data Tables */
-  .table-scroll {
-    max-height: 250px;
-    overflow-y: auto;
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-sm);
-    margin-top: 10px;
-    background: var(--bg-input);
-  }
-  .table-scroll::-webkit-scrollbar { width: 6px; }
-  .table-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 999px; }
-  table {
-    border-collapse: collapse;
-    width: 100%;
-    font-size: 12.5px;
-  }
-  th, td {
-    padding: 8px 12px;
-    text-align: left;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  }
-  th {
-    background: #141d2f;
-    position: sticky;
-    top: 0;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--text-muted);
-    border-bottom: 1px solid var(--border-subtle);
-  }
-  tr:hover td { background: rgba(255, 255, 255, 0.03); }
+    .btn-preset:hover {
+      border-color: var(--brand-primary);
+      background: rgba(99, 102, 241, 0.15);
+      color: #fff;
+    }
 
-  /* Progress Bar in Similarity Table */
-  .bar-container {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .bar-track {
-    height: 6px;
-    width: 70px;
-    background: #1e293b;
-    border-radius: 999px;
-    overflow: hidden;
-  }
-  .bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--brand-primary), var(--cyan-accent));
-    border-radius: 999px;
-  }
+    /* Grid Layout */
+    .workbench-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 28px;
+    }
 
-  /* 3D Visualization */
-  #plot {
-    height: 520px;
-    width: 100%;
-    border-radius: var(--radius-md);
-    background: var(--bg-input);
-    border: 1px solid var(--border-subtle);
-    margin-top: 14px;
-    overflow: hidden;
-  }
+    @media (max-width: 960px) {
+      .workbench-grid {
+        grid-template-columns: 1fr;
+      }
+    }
 
-  /* Next-Token Probability Bars */
-  .prob-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 8px 0;
-    font-size: 13px;
-  }
-  .prob-token {
-    width: 80px;
-    font-family: var(--font-mono);
-    font-weight: 700;
-    color: var(--cyan-accent);
-  }
-  .prob-bar-bg {
-    flex: 1;
-    height: 8px;
-    background: #1e293b;
-    border-radius: 4px;
-    overflow: hidden;
-  }
-  .prob-bar-val {
-    height: 100%;
-    background: linear-gradient(90deg, #6366f1, #06b6d4);
-    border-radius: 4px;
-  }
-  .prob-pct {
-    width: 48px;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    text-align: right;
-    color: var(--text-muted);
-  }
+    /* Card Surfaces */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: var(--card-shadow);
+      transition: border-color 0.2s ease;
+    }
 
-  code {
-    font-family: var(--font-mono);
-    background: rgba(255, 255, 255, 0.06);
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 12px;
-    color: #38bdf8;
-  }
-  .subtle-hint {
-    font-size: 12px;
-    color: var(--text-dim);
-    margin-top: 6px;
-  }
-</style>
+    .card:hover {
+      border-color: rgba(99, 102, 241, 0.35);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .step-tag {
+      background: rgba(99, 102, 241, 0.2);
+      color: #a5b4fc;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    /* Form Controls */
+    label,
+    .label-heading {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      margin: 14px 0 6px;
+    }
+
+    textarea,
+    input[type=text] {
+      width: 100%;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      color: #e2e8f0;
+      padding: 10px 12px;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    textarea:focus,
+    input[type=text]:focus {
+      border-color: var(--border-active);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+      background: #131d33;
+    }
+
+    /* Action Buttons */
+    .btn {
+      background: linear-gradient(135deg, var(--brand-primary), var(--brand-hover));
+      color: #ffffff;
+      border: none;
+      padding: 9px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 10px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn:hover {
+      background: linear-gradient(135deg, #7175ff, #584feb);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.45);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-secondary {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      box-shadow: none;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.07);
+      border-color: var(--border-active);
+    }
+
+    /* Segmented Controls / Mode Pickers */
+    .mode-picker {
+      display: flex;
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 3px;
+      margin: 10px 0 16px;
+    }
+
+    .mode-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .mode-btn.active {
+      background: var(--brand-primary);
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(99, 102, 241, 0.35);
+    }
+
+    /* Sliders */
+    .control-panel {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      margin: 14px 0;
+    }
+
+    .control-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .badge-metric {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--cyan-accent);
+      background: rgba(6, 182, 212, 0.1);
+      padding: 2px 8px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(6, 182, 212, 0.2);
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: #1e293b;
+      border-radius: 999px;
+      outline: none;
+      margin: 10px 0 6px;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--cyan-accent);
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(6, 182, 212, 0.6);
+      transition: transform 0.1s ease;
+    }
+
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+
+    /* Token Chips */
+    .token-stream {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 14px;
+      background: var(--bg-input);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+      min-height: 58px;
+      margin-top: 12px;
+    }
+
+    .token-chip {
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    .token-chip:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      filter: brightness(1.1);
+    }
+
+    .token-str {
+      font-family: var(--font-mono);
+      font-size: 13.5px;
+      font-weight: 700;
+    }
+
+    .token-idx {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      opacity: 0.85;
+      margin-top: 2px;
+    }
+
+    /* Metric Widgets */
+    .metric-tiles {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
+      margin: 14px 0;
+    }
+
+    .tile {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+    }
+
+    .tile-title {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+
+    .tile-value {
+      font-size: 18px;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      color: #fff;
+      margin-top: 4px;
+    }
+
+    /* Token Inspector Dialog / Drawer */
+    .inspector-card {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-left: 3px solid var(--cyan-accent);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      margin-top: 12px;
+      font-size: 13px;
+    }
+
+    .inspector-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .inspector-row:last-child {
+      border-bottom: none;
+    }
+
+    /* Data Tables */
+    .table-scroll {
+      max-height: 250px;
+      overflow-y: auto;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      margin-top: 10px;
+      background: var(--bg-input);
+    }
+
+    .table-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .table-scroll::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 999px;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 12.5px;
+    }
+
+    th,
+    td {
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    th {
+      background: #141d2f;
+      position: sticky;
+      top: 0;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    /* Progress Bar in Similarity Table */
+    .bar-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .bar-track {
+      height: 6px;
+      width: 70px;
+      background: #1e293b;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--brand-primary), var(--cyan-accent));
+      border-radius: 999px;
+    }
+
+    /* 3D Visualization */
+    #plot {
+      height: 520px;
+      width: 100%;
+      border-radius: var(--radius-md);
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      margin-top: 14px;
+      overflow: hidden;
+    }
+
+    /* Next-Token Probability Bars */
+    .prob-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 8px 0;
+      font-size: 13px;
+    }
+
+    .prob-token {
+      width: 80px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--cyan-accent);
+    }
+
+    .prob-bar-bg {
+      flex: 1;
+      height: 8px;
+      background: #1e293b;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .prob-bar-val {
+      height: 100%;
+      background: linear-gradient(90deg, #6366f1, #06b6d4);
+      border-radius: 4px;
+    }
+
+    .prob-pct {
+      width: 48px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      text-align: right;
+      color: var(--text-muted);
+    }
+
+    code {
+      font-family: var(--font-mono);
+      background: rgba(255, 255, 255, 0.06);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #38bdf8;
+    }
+
+    .subtle-hint {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 6px;
+    }
+  </style>
 </head>
 
 <body>
-<div class="container">
-  <!-- Top Bar -->
-  <header>
-    <div class="brand-group">
-      <div class="brand-logo">⚡</div>
-      <div>
-        <h1>NeuroParse Studio</h1>
-        <p class="header-desc">Interactive Deep-Dive into Tokenization, Vector Embeddings, &amp; 3D Latent Geometry</p>
-      </div>
-    </div>
-    <div class="system-pills">
-      <span class="pill">Tokenizer Engine v2.4</span>
-      <span class="pill">64-Dim Trigram Projection</span>
-      <span class="pill">PCA Deflation</span>
-    </div>
-  </header>
-
-  <!-- Dataset Presets Bar -->
-  <div class="presets-bar">
-    <div class="preset-label">📚 Load Quick Dataset:</div>
-    <div class="preset-btns">
-      <button class="btn-preset" onclick="loadCorpusPreset('ai')">🤖 AI &amp; LLM Concepts</button>
-      <button class="btn-preset" onclick="loadCorpusPreset('tech')">💻 Code &amp; Software</button>
-      <button class="btn-preset" onclick="loadCorpusPreset('science')">🌌 Astrophysics &amp; Quantum</button>
-      <button class="btn-preset" onclick="loadCorpusPreset('dialogue')">💬 Human Conversation</button>
-    </div>
-  </div>
-
-  <!-- Primary Workbench Grid -->
-  <div class="workbench-grid">
-    <!-- LEFT CARD: TOKENIZER & VOCABULARY -->
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">
-          <span class="step-tag">STAGE 1</span>
-          <span>Vocabulary Learning &amp; Tokenizer</span>
+  <div class="container">
+    <!-- Top Bar -->
+    <header>
+      <div class="brand-group">
+        <div class="brand-logo">⚡</div>
+        <div>
+          <h1>NeuroParse Studio</h1>
+          <p class="header-desc">Interactive Deep-Dive into Tokenization, Vector Embeddings, &amp; 3D Latent Geometry
+          </p>
         </div>
       </div>
-
-      <!-- Algorithm Mode Selector -->
-      <label>Tokenizer Segmentation Strategy</label>
-      <div class="mode-picker">
-        <button class="mode-btn active" id="btn-mode-subword" onclick="setTokenMode('subword')">Subword (WordPiece)</button>
-        <button class="mode-btn" id="btn-mode-bpe" onclick="setTokenMode('bpe')">Byte-Pair (BPE)</button>
-        <button class="mode-btn" id="btn-mode-char" onclick="setTokenMode('char')">Character Level</button>
+      <div class="system-pills">
+        <span class="pill">Tokenizer Engine v2.4</span>
+        <span class="pill">64-Dim Trigram Projection</span>
+        <span class="pill">PCA Deflation</span>
       </div>
+    </header>
 
-      <label for="corpus">Training Text Corpus (Corpus to build vocabulary)</label>
-      <textarea id="corpus" rows="5">Artificial neural networks process language through numerical representations.
+    <!-- Dataset Presets Bar -->
+    <div class="presets-bar">
+      <div class="preset-label">📚 Load Quick Dataset:</div>
+      <div class="preset-btns">
+        <button class="btn-preset" onclick="loadCorpusPreset('ai')">🤖 AI &amp; LLM Concepts</button>
+        <button class="btn-preset" onclick="loadCorpusPreset('tech')">💻 Code &amp; Software</button>
+        <button class="btn-preset" onclick="loadCorpusPreset('science')">🌌 Astrophysics &amp; Quantum</button>
+        <button class="btn-preset" onclick="loadCorpusPreset('dialogue')">💬 Human Conversation</button>
+      </div>
+    </div>
+
+    <!-- Primary Workbench Grid -->
+    <div class="workbench-grid">
+      <!-- LEFT CARD: TOKENIZER & VOCABULARY -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="step-tag">STAGE 1</span>
+            <span>Vocabulary Learning &amp; Tokenizer</span>
+          </div>
+        </div>
+
+        <!-- Algorithm Mode Selector -->
+        <div class="label-heading">Tokenizer Segmentation Strategy</div>
+        <div class="mode-picker">
+          <button class="mode-btn active" id="btn-mode-subword" onclick="setTokenMode('subword')">Subword
+            (WordPiece)</button>
+          <button class="mode-btn" id="btn-mode-bpe" onclick="setTokenMode('bpe')">Byte-Pair (BPE)</button>
+          <button class="mode-btn" id="btn-mode-char" onclick="setTokenMode('char')">Character Level</button>
+        </div>
+
+        <label for="corpus">Training Text Corpus (Corpus to build vocabulary)</label>
+        <textarea id="corpus" rows="5">Artificial neural networks process language through numerical representations.
 Transformers analyze contextual tokens across high-dimensional attention layers.
 Tokenization converts text strings into discrete atomic vocabulary indices.
 Deep learning architectures predict subsequent tokens using probability distributions.
 Natural language understanding relies on vector geometry and semantic similarity.</textarea>
 
-      <div style="margin-top: 12px; display: flex; gap: 8px;">
-        <button class="btn" id="build-vocab-btn">⚡ Train Vocabulary</button>
-        <button class="btn btn-secondary" onclick="exportVocabJSON()">Export Vocab JSON</button>
+        <div style="margin-top: 12px; display: flex; gap: 8px;">
+          <button class="btn" id="build-vocab-btn">⚡ Train Vocabulary</button>
+          <button class="btn btn-secondary" onclick="exportVocabJSON()">Export Vocab JSON</button>
+        </div>
+
+        <!-- Dynamic Vocabulary Pruner Slider -->
+        <div id="vocab-slider-box" class="control-panel" style="display:none;">
+          <div class="control-row">
+            <span style="font-size: 13px; font-weight: 600;">Active Dictionary Cap</span>
+            <span id="vocab-slider-value" class="badge-metric"></span>
+          </div>
+          <input type="range" id="vocab-slider" min="1">
+          <p class="subtle-hint">Slide left to restrict vocabulary. Less frequent words are split into subword pieces
+            (##), illustrating the vocabulary-size vs sequence-length trade-off.</p>
+        </div>
+
+        <!-- Vocab Table Output -->
+        <div id="vocab-output"></div>
+
+        <!-- Interactive Token Inspector Box -->
+        <div id="token-inspector" style="display:none;" class="inspector-card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <strong style="color:var(--cyan-accent); font-size:13px;">🔍 Token Inspector</strong>
+            <span style="font-size:11px; color:var(--text-dim); cursor:pointer;"
+              onclick="this.parentElement.parentElement.style.display='none'">✕ Close</span>
+          </div>
+          <div id="inspector-content"></div>
+        </div>
       </div>
 
-      <!-- Dynamic Vocabulary Pruner Slider -->
-      <div id="vocab-slider-box" class="control-panel" style="display:none;">
-        <div class="control-row">
-          <span style="font-size: 13px; font-weight: 600;">Active Dictionary Cap</span>
-          <span id="vocab-slider-value" class="badge-metric"></span>
+      <!-- RIGHT CARD: ENCODER & TOKEN CHIPS -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="step-tag">STAGE 2</span>
+            <span>Sentence Encoding &amp; Statistics</span>
+          </div>
         </div>
-        <input type="range" id="vocab-slider" min="1">
-        <p class="subtle-hint">Slide left to restrict vocabulary. Less frequent words are split into subword pieces (##), illustrating the vocabulary-size vs sequence-length trade-off.</p>
-      </div>
 
-      <!-- Vocab Table Output -->
-      <div id="vocab-output"></div>
+        <label for="encode-input">Input Sentence to Encode</label>
+        <textarea id="encode-input" rows="2">Neural networks learn semantic token vectors quickly.</textarea>
 
-      <!-- Interactive Token Inspector Box -->
-      <div id="token-inspector" style="display:none;" class="inspector-card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <strong style="color:var(--cyan-accent); font-size:13px;">🔍 Token Inspector</strong>
-          <span style="font-size:11px; color:var(--text-dim); cursor:pointer;" onclick="this.parentElement.parentElement.style.display='none'">✕ Close</span>
+        <div style="margin-top: 10px;">
+          <button class="btn" id="tokenize-btn">🔤 Encode Sentence</button>
         </div>
-        <div id="inspector-content"></div>
+
+        <!-- Token Chips Stream -->
+        <div id="token-output"></div>
+
+        <!-- Detokenizer / String Reconstruction Display -->
+        <div id="detokenizer-panel" style="margin-top: 16px; display: none;">
+          <div class="label-heading">String Reconstruction (Detokenization)</div>
+          <div id="detokenized-text"
+            style="font-family: var(--font-mono); font-size: 13px; padding: 10px 12px; background: var(--bg-surface-elevated); border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); color: #a5b4fc;">
+          </div>
+        </div>
+
+        <!-- Next-Token Predictor Simulation (Bigram N-Gram LM) -->
+        <div id="next-token-panel"
+          style="margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.05);">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 13px; color: #fff;">🔮 Next-Token Distribution (N-Gram LM)</strong>
+            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11.5px;"
+              onclick="generateNextToken()">Autoregressively Append</button>
+          </div>
+          <p class="subtle-hint">Computes conditional likelihoods P(token | context) derived from the learned corpus
+            transitions.</p>
+          <div id="next-token-probs" style="margin-top: 10px;"></div>
+        </div>
       </div>
     </div>
 
-    <!-- RIGHT CARD: ENCODER & TOKEN CHIPS -->
-    <div class="card">
+    <!-- BOTTOM CARD: 3D EMBEDDING VISUALIZATION -->
+    <div class="card" style="margin-bottom: 24px;">
       <div class="card-header">
         <div class="card-title">
-          <span class="step-tag">STAGE 2</span>
-          <span>Sentence Encoding &amp; Statistics</span>
+          <span class="step-tag">STAGE 3</span>
+          <span>Vector Embeddings, Cosine Geometry &amp; 3D Projection</span>
         </div>
       </div>
 
-      <label for="encode-input">Input Sentence to Encode</label>
-      <textarea id="encode-input" rows="2">Neural networks learn semantic token vectors quickly.</textarea>
-
-      <div style="margin-top: 10px;">
-        <button class="btn" id="tokenize-btn">🔤 Encode Sentence</button>
-      </div>
-
-      <!-- Token Chips Stream -->
-      <div id="token-output"></div>
-
-      <!-- Detokenizer / String Reconstruction Display -->
-      <div id="detokenizer-panel" style="margin-top: 16px; display: none;">
-        <label>String Reconstruction (Detokenization)</label>
-        <div id="detokenized-text" style="font-family: var(--font-mono); font-size: 13px; padding: 10px 12px; background: var(--bg-surface-elevated); border-radius: var(--radius-sm); border: 1px solid var(--border-subtle); color: #a5b4fc;"></div>
-      </div>
-
-      <!-- Next-Token Predictor Simulation (Bigram N-Gram LM) -->
-      <div id="next-token-panel" style="margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.05);">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <strong style="font-size: 13px; color: #fff;">🔮 Next-Token Distribution (N-Gram LM)</strong>
-          <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11.5px;" onclick="generateNextToken()">Autoregressively Append</button>
-        </div>
-        <p class="subtle-hint">Computes conditional likelihoods P(token | context) derived from the learned corpus transitions.</p>
-        <div id="next-token-probs" style="margin-top: 10px;"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- BOTTOM CARD: 3D EMBEDDING VISUALIZATION -->
-  <div class="card" style="margin-bottom: 24px;">
-    <div class="card-header">
-      <div class="card-title">
-        <span class="step-tag">STAGE 3</span>
-        <span>Vector Embeddings, Cosine Geometry &amp; 3D Projection</span>
-      </div>
-    </div>
-
-    <label for="sentences">Corpus Sentences for Embedding Space (One sentence per line)</label>
-    <textarea id="sentences" rows="6">Artificial neural networks process natural language text.
+      <label for="sentences">Corpus Sentences for Embedding Space (One sentence per line)</label>
+      <textarea id="sentences" rows="6">Artificial neural networks process natural language text.
 Deep learning architectures predict tokens through probability distributions.
 Transformers analyze contextual tokens across attention layers.
 Quantum computers utilize qubits in coherent superposition states.
@@ -678,206 +768,208 @@ Quantum entanglement links particles across spatial separations.
 High frequency financial markets execute algorithmic trades.
 Equity shares fluctuated rapidly during the economic report.</textarea>
 
-    <div style="margin-top: 12px;">
-      <button class="btn" id="embed-btn">🌐 Embed &amp; Render 3D Vector Space</button>
-    </div>
-    <div id="embed-status" style="margin-top: 8px; color: var(--amber-accent); font-size: 13px;"></div>
-
-    <div id="plot"></div>
-    <div id="pairs-output" style="margin-top: 20px;"></div>
-
-    <!-- User Sandbox Word Follow-through -->
-    <div style="margin-top: 28px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.06);">
-      <h3 style="font-size: 15px; margin-bottom: 8px;">🧪 Track a Custom Sentence in 3D Space</h3>
-      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">
-        Type any phrase to watch it transform: Tokens $\rightarrow$ 64D Vector $\rightarrow$ 3D Coordinate $\rightarrow$ Nearest Neighbors.
-      </p>
-      <div style="display: flex; gap: 8px;">
-        <input type="text" id="new-word" placeholder="e.g. Algorithmic computing creates intelligent neural agents.">
-        <button class="btn" id="add-word-btn" style="white-space: nowrap;">Track in 3D</button>
+      <div style="margin-top: 12px;">
+        <button class="btn" id="embed-btn">🌐 Embed &amp; Render 3D Vector Space</button>
       </div>
-      <div id="new-word-output"></div>
+      <div id="embed-status" style="margin-top: 8px; color: var(--amber-accent); font-size: 13px;"></div>
+
+      <div id="plot"></div>
+      <div id="pairs-output" style="margin-top: 20px;"></div>
+
+      <!-- User Sandbox Word Follow-through -->
+      <div style="margin-top: 28px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.06);">
+        <h3 style="font-size: 15px; margin-bottom: 8px;">🧪 Track a Custom Sentence in 3D Space</h3>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">
+          Type any phrase to watch it transform: Tokens $\rightarrow$ 64D Vector $\rightarrow$ 3D Coordinate
+          $\rightarrow$ Nearest Neighbors.
+        </p>
+        <div style="display: flex; gap: 8px;">
+          <input type="text" id="new-word" placeholder="e.g. Algorithmic computing creates intelligent neural agents.">
+          <button class="btn" id="add-word-btn" style="white-space: nowrap;">Track in 3D</button>
+        </div>
+        <div id="new-word-output"></div>
+      </div>
     </div>
   </div>
-</div>
 
-<script>
-/**
- * =====================================================================
- * NEUROPARSE ENGINE: ARCHITECTURE & ALGORITHMS
- * =====================================================================
- */
+  <script>
+    /* global Plotly */
+    /**
+     * =====================================================================
+     * NEUROPARSE ENGINE: ARCHITECTURE & ALGORITHMS
+     * =====================================================================
+     */
 
-// Tokenizer State
-let currentAlgorithm = "subword"; // "subword" | "bpe" | "char"
-let vocabRegistry = null;
-let frequencyList = [];
-let unigramCounts = {};
-let subwordContinuations = [];
-let bigramTransitions = {}; // Used for Next-Token Prediction
-let userQueryString = null;
+    // Tokenizer State
+    let currentAlgorithm = "subword"; // "subword" | "bpe" | "char"
+    let vocabRegistry = null;
+    let frequencyList = [];
+    let unigramCounts = {};
+    let subwordContinuations = [];
+    let bigramTransitions = {}; // Used for Next-Token Prediction
+    let userQueryString = null;
 
-// Linguistic Continuation Suffixes for Subwords
-const SUFFIX_DICTIONARY = ["##s", "##es", "##ed", "##ing", "##er", "##ly", "##tion", "##al", "##ic", "##ment"];
+    // Linguistic Continuation Suffixes for Subwords
+    const SUFFIX_DICTIONARY = ["##s", "##es", "##ed", "##ing", "##er", "##ly", "##tion", "##al", "##ic", "##ment"];
 
-// Corpus Presets
-const PRESET_COLLECTIONS = {
-  ai: {
-    corpus: `Artificial neural networks process language through numerical representations.
+    // Corpus Presets
+    const PRESET_COLLECTIONS = {
+      ai: {
+        corpus: `Artificial neural networks process language through numerical representations.
 Transformers analyze contextual tokens across high-dimensional attention layers.
 Tokenization converts text strings into discrete atomic vocabulary indices.
 Deep learning architectures predict subsequent tokens using probability distributions.
 Natural language understanding relies on vector geometry and semantic similarity.`,
-    test: "Neural networks learn semantic token vectors quickly.",
-    sentences: `Artificial neural networks process natural language text.
+        test: "Neural networks learn semantic token vectors quickly.",
+        sentences: `Artificial neural networks process natural language text.
 Deep learning architectures predict tokens through probability distributions.
 Transformers analyze contextual tokens across attention layers.
 Quantum computers utilize qubits in coherent superposition states.
 Quantum entanglement links particles across spatial separations.
 High frequency financial markets execute algorithmic trades.
 Equity shares fluctuated rapidly during the economic report.`
-  },
-  tech: {
-    corpus: `Python scripts compile into bytecode before execution on the virtual machine.
+      },
+      tech: {
+        corpus: `Python scripts compile into bytecode before execution on the virtual machine.
 JavaScript engines execute asynchronous events within a single-threaded loop.
 Database queries optimize execution paths using relational indexing.
 Operating systems schedule memory partitions between concurrent processes.
 Compilers transform high-level source code into efficient machine instructions.`,
-    test: "Compilers execute concurrent memory instructions efficiently.",
-    sentences: `Python scripts compile into bytecode before execution on the virtual machine.
+        test: "Compilers execute concurrent memory instructions efficiently.",
+        sentences: `Python scripts compile into bytecode before execution on the virtual machine.
 JavaScript engines execute asynchronous events within a single-threaded loop.
 Operating systems schedule memory partitions between concurrent processes.
 Modern web browsers render interactive canvas graphics with WebGL.
 Frontend frameworks construct reactive virtual DOM components dynamically.
 Cloud servers distribute incoming network traffic across clustered containers.
 Microservices communicate through authenticated REST APIs and WebSockets.`
-  },
-  science: {
-    corpus: `Quantum mechanics predicts probabilistic behaviors of subatomic particles.
+      },
+      science: {
+        corpus: `Quantum mechanics predicts probabilistic behaviors of subatomic particles.
 General relativity describes gravitational interactions as spacetime curvature.
 Black holes prevent radiation from escaping past their event horizons.
 Superconductors conduct electrical current without measurable resistance.
 Thermodynamic entropy increases within isolated physical systems over time.`,
-    test: "Subatomic particles interact within gravitational spacetime fields.",
-    sentences: `Quantum mechanics predicts probabilistic behaviors of subatomic particles.
+        test: "Subatomic particles interact within gravitational spacetime fields.",
+        sentences: `Quantum mechanics predicts probabilistic behaviors of subatomic particles.
 General relativity describes gravitational interactions as spacetime curvature.
 Black holes prevent radiation from escaping past their event horizons.
 Superconductors conduct electrical current without measurable resistance.
 Biological cells synthesize proteins through messenger RNA transcription.
 Ribosomes translate codon sequences into complex folded enzyme structures.
 Cellular mitochondria generate adenosine triphosphate via aerobic respiration.`
-  },
-  dialogue: {
-    corpus: `Hello there, could you explain how this tokenizer works?
+      },
+      dialogue: {
+        corpus: `Hello there, could you explain how this tokenizer works?
 I would love to understand how words turn into multidimensional numbers.
 Computers cannot read letters directly, so they map them to integers.
 Once text becomes numbers, neural networks can calculate their meaning.
 Thank you for guiding me through this interactive pipeline demonstration!`,
-    test: "Could you explain how integers turn into numbers directly?",
-    sentences: `Hello there, could you explain how this tokenizer works?
+        test: "Could you explain how integers turn into numbers directly?",
+        sentences: `Hello there, could you explain how this tokenizer works?
 I would love to understand how words turn into multidimensional numbers.
 Computers cannot read letters directly, so they map them to integers.
 Good morning, are you ready to study advanced machine learning?
 We are going to explore deep learning architectures today in class.
 Have you prepared your notebook for the upcoming neural network assignment?
 I have finished writing the code for our natural language project.`
-  }
-};
+      }
+    };
 
-function loadCorpusPreset(name) {
-  const data = PRESET_COLLECTIONS[name];
-  if (!data) return;
-  document.getElementById("corpus").value = data.corpus;
-  document.getElementById("encode-input").value = data.test;
-  document.getElementById("sentences").value = data.sentences;
-  buildVocabulary();
-  tokenizeSentence();
-  embedAndPlot();
-}
-
-function setTokenMode(mode) {
-  currentAlgorithm = mode;
-  document.querySelectorAll(".mode-btn").forEach(btn => btn.classList.remove("active"));
-  document.getElementById(`btn-mode-${mode}`).classList.add("active");
-  buildVocabulary();
-  tokenizeSentence();
-}
-
-/**
- * Normalizes text and isolates punctuation into discrete word tokens
- */
-function normalizeAndTokenizeWords(text) {
-  let cleaned = text.toLowerCase();
-  cleaned = cleaned.replace(/([.,!?;:()\[\]'"`])/g, " $1 ");
-  return cleaned.split(/\s+/).filter(tok => tok.length > 0);
-}
-
-/**
- * Builds vocabulary and constructs Bigram Transition Matrix for Next-Token prediction
- */
-function buildVocabulary() {
-  const rawCorpus = document.getElementById("corpus").value;
-  const wordTokens = normalizeAndTokenizeWords(rawCorpus);
-
-  // Frequency mapping
-  unigramCounts = {};
-  bigramTransitions = {};
-
-  for (let i = 0; i < wordTokens.length; i++) {
-    const w = wordTokens[i];
-    unigramCounts[w] = (unigramCounts[w] || 0) + 1;
-
-    // Track bigrams (current -> next token)
-    if (i < wordTokens.length - 1) {
-      const nextWord = wordTokens[i + 1];
-      if (!bigramTransitions[w]) bigramTransitions[w] = {};
-      bigramTransitions[w][nextWord] = (bigramTransitions[w][nextWord] || 0) + 1;
+    function loadCorpusPreset(name) {
+      const data = PRESET_COLLECTIONS[name];
+      if (!data) return;
+      document.getElementById("corpus").value = data.corpus;
+      document.getElementById("encode-input").value = data.test;
+      document.getElementById("sentences").value = data.sentences;
+      buildVocabulary();
+      tokenizeSentence();
+      embedAndPlot();
     }
-  }
 
-  frequencyList = Object.keys(unigramCounts).sort((a, b) => unigramCounts[b] - unigramCounts[a]);
+    function setTokenMode(mode) {
+      currentAlgorithm = mode;
+      document.querySelectorAll(".mode-btn").forEach(btn => btn.classList.remove("active"));
+      document.getElementById(`btn-mode-${mode}`).classList.add("active");
+      buildVocabulary();
+      tokenizeSentence();
+    }
 
-  // Generate subword fragments
-  const uniqueChars = [...new Set(wordTokens.join("").replace(/[^a-z0-9]/g, ""))].sort();
-  subwordContinuations = [
-    ...SUFFIX_DICTIONARY,
-    ...uniqueChars,
-    ...uniqueChars.map(c => "##" + c)
-  ];
+    /**
+     * Normalizes text and isolates punctuation into discrete word tokens
+     */
+    function normalizeAndTokenizeWords(text) {
+      let cleaned = text.toLowerCase();
+      cleaned = cleaned.replace(/([.,!?;:()[\]'"`])/g, " $1 ");
+      return cleaned.split(/\s+/).filter(tok => tok.length > 0);
+    }
 
-  const slider = document.getElementById("vocab-slider");
-  slider.max = frequencyList.length;
-  slider.value = frequencyList.length;
-  document.getElementById("vocab-slider-box").style.display = "block";
+    /**
+     * Builds vocabulary and constructs Bigram Transition Matrix for Next-Token prediction
+     */
+    function buildVocabulary() {
+      const rawCorpus = document.getElementById("corpus").value;
+      const wordTokens = normalizeAndTokenizeWords(rawCorpus);
 
-  applyVocabSize(frequencyList.length);
-}
+      // Frequency mapping
+      unigramCounts = {};
+      bigramTransitions = {};
 
-/**
- * Constrains vocabulary to top-N words and outputs formatted dictionary table
- */
-function applyVocabSize(sizeLimit) {
-  const retainedWords = frequencyList.slice(0, sizeLimit);
-  document.getElementById("vocab-slider-value").textContent = `${sizeLimit} / ${frequencyList.length} words`;
+      for (let i = 0; i < wordTokens.length; i++) {
+        const w = wordTokens[i];
+        unigramCounts[w] = (unigramCounts[w] || 0) + 1;
 
-  vocabRegistry = { "[UNK]": 0, "[CLS]": 1, "[SEP]": 2 };
-  let rowsHtml = `
+        // Track bigrams (current -> next token)
+        if (i < wordTokens.length - 1) {
+          const nextWord = wordTokens[i + 1];
+          if (!bigramTransitions[w]) bigramTransitions[w] = {};
+          bigramTransitions[w][nextWord] = (bigramTransitions[w][nextWord] || 0) + 1;
+        }
+      }
+
+      frequencyList = Object.keys(unigramCounts).sort((a, b) => unigramCounts[b] - unigramCounts[a]);
+
+      // Generate subword fragments
+      const uniqueChars = [...new Set(wordTokens.join("").replace(/[^a-z0-9]/g, ""))].sort();
+      subwordContinuations = [
+        ...SUFFIX_DICTIONARY,
+        ...uniqueChars,
+        ...uniqueChars.map(c => "##" + c)
+      ];
+
+      const slider = document.getElementById("vocab-slider");
+      slider.max = frequencyList.length;
+      slider.value = frequencyList.length;
+      document.getElementById("vocab-slider-box").style.display = "block";
+
+      applyVocabSize(frequencyList.length);
+    }
+
+    /**
+     * Constrains vocabulary to top-N words and outputs formatted dictionary table
+     */
+    function applyVocabSize(sizeLimit) {
+      const retainedWords = frequencyList.slice(0, sizeLimit);
+      document.getElementById("vocab-slider-value").textContent = `${sizeLimit} / ${frequencyList.length} words`;
+
+      vocabRegistry = { "[UNK]": 0, "[CLS]": 1, "[SEP]": 2 };
+      let rowsHtml = `
     <tr><td><code>0</code></td><td><span style="color:#ef4444; font-weight:700;">[UNK]</span></td><td>Special</td></tr>
     <tr><td><code>1</code></td><td><span style="color:#38bdf8; font-weight:700;">[CLS]</span></td><td>Special</td></tr>
     <tr><td><code>2</code></td><td><span style="color:#38bdf8; font-weight:700;">[SEP]</span></td><td>Special</td></tr>`;
 
-  retainedWords.forEach(w => {
-    vocabRegistry[w] = Object.keys(vocabRegistry).length;
-    rowsHtml += `<tr><td><code>${vocabRegistry[w]}</code></td><td><strong>${escapeHtml(w)}</strong></td><td>${unigramCounts[w]}</td></tr>`;
-  });
+      retainedWords.forEach(w => {
+        vocabRegistry[w] = Object.keys(vocabRegistry).length;
+        rowsHtml += `<tr><td><code>${vocabRegistry[w]}</code></td><td><strong>${escapeHtml(w)}</strong></td><td>${unigramCounts[w]}</td></tr>`;
+      });
 
-  subwordContinuations.forEach(piece => {
-    if (piece in vocabRegistry) return;
-    vocabRegistry[piece] = Object.keys(vocabRegistry).length;
-    rowsHtml += `<tr><td><code>${vocabRegistry[piece]}</code></td><td><code style="color:#a855f7;">${escapeHtml(piece)}</code></td><td><span style="color:var(--text-dim);">fragment</span></td></tr>`;
-  });
+      subwordContinuations.forEach(piece => {
+        if (piece in vocabRegistry) return;
+        vocabRegistry[piece] = Object.keys(vocabRegistry).length;
+        rowsHtml += `<tr><td><code>${vocabRegistry[piece]}</code></td><td><code style="color:#a855f7;">${escapeHtml(piece)}</code></td><td><span style="color:var(--text-dim);">fragment</span></td></tr>`;
+      });
 
-  document.getElementById("vocab-output").innerHTML = `
+      document.getElementById("vocab-output").innerHTML = `
     <div class="metric-tiles">
       <div class="tile">
         <div class="tile-title">Total Tokens</div>
@@ -898,111 +990,111 @@ function applyVocabSize(sizeLimit) {
         ${rowsHtml}
       </table>
     </div>`;
-}
+    }
 
-/**
- * Greedy Longest-Match Subword Segmentation
- */
-function segmentIntoSubwords(word) {
-  const result = [];
-  let startIdx = 0;
+    /**
+     * Greedy Longest-Match Subword Segmentation
+     */
+    function segmentIntoSubwords(word) {
+      const result = [];
+      let startIdx = 0;
 
-  while (startIdx < word.length) {
-    let matchedPiece = null;
-    for (let endIdx = word.length; endIdx > startIdx; endIdx--) {
-      let candidate = word.slice(startIdx, endIdx);
-      if (startIdx > 0) candidate = "##" + candidate;
-      if (candidate in vocabRegistry) {
-        matchedPiece = candidate;
-        break;
+      while (startIdx < word.length) {
+        let matchedPiece = null;
+        for (let endIdx = word.length; endIdx > startIdx; endIdx--) {
+          let candidate = word.slice(startIdx, endIdx);
+          if (startIdx > 0) candidate = "##" + candidate;
+          if (candidate in vocabRegistry) {
+            matchedPiece = candidate;
+            break;
+          }
+        }
+
+        if (matchedPiece === null) {
+          return [{ text: "[UNK]", id: 0, isSubword: true, raw: word }];
+        }
+
+        result.push({
+          text: matchedPiece,
+          id: vocabRegistry[matchedPiece],
+          isSubword: true,
+          raw: word
+        });
+        startIdx += matchedPiece.replace("##", "").length;
       }
+      return result;
     }
 
-    if (matchedPiece === null) {
-      return [{ text: "[UNK]", id: 0, isSubword: true, raw: word }];
-    }
+    /**
+     * Main Encoder Function (Dispatches based on selected Tokenizer Strategy)
+     */
+    function encodeSentenceToTokens(text) {
+      const tokenList = [];
 
-    result.push({
-      text: matchedPiece,
-      id: vocabRegistry[matchedPiece],
-      isSubword: true,
-      raw: word
-    });
-    startIdx += matchedPiece.replace("##", "").length;
-  }
-  return result;
-}
-
-/**
- * Main Encoder Function (Dispatches based on selected Tokenizer Strategy)
- */
-function encodeSentenceToTokens(text) {
-  const tokenList = [];
-
-  if (currentAlgorithm === "char") {
-    for (const char of text) {
-      const id = vocabRegistry[char.toLowerCase()] || 0;
-      tokenList.push({ text: char, id, isSubword: false });
-    }
-    return tokenList;
-  }
-
-  const words = normalizeAndTokenizeWords(text);
-  for (const w of words) {
-    if (currentAlgorithm === "bpe") {
-      // Byte-pair simulation: break word into characters and combine common bigrams
-      if (w in vocabRegistry) {
-        tokenList.push({ text: w, id: vocabRegistry[w], isSubword: false });
-      } else {
-        tokenList.push(...segmentIntoSubwords(w));
+      if (currentAlgorithm === "char") {
+        for (const char of text) {
+          const id = vocabRegistry[char.toLowerCase()] || 0;
+          tokenList.push({ text: char, id, isSubword: false });
+        }
+        return tokenList;
       }
-    } else {
-      // Subword (WordPiece)
-      if (w in vocabRegistry) {
-        tokenList.push({ text: w, id: vocabRegistry[w], isSubword: false });
-      } else {
-        tokenList.push(...segmentIntoSubwords(w));
+
+      const words = normalizeAndTokenizeWords(text);
+      for (const w of words) {
+        if (currentAlgorithm === "bpe") {
+          // Byte-pair simulation: break word into characters and combine common bigrams
+          if (w in vocabRegistry) {
+            tokenList.push({ text: w, id: vocabRegistry[w], isSubword: false });
+          } else {
+            tokenList.push(...segmentIntoSubwords(w));
+          }
+        } else {
+          // Subword (WordPiece)
+          if (w in vocabRegistry) {
+            tokenList.push({ text: w, id: vocabRegistry[w], isSubword: false });
+          } else {
+            tokenList.push(...segmentIntoSubwords(w));
+          }
+        }
       }
+      return tokenList;
     }
-  }
-  return tokenList;
-}
 
-/**
- * Deterministic Hue Generation for Token Chips
- */
-function getTokenPalette(id) {
-  const hue = (id * 53) % 360;
-  return {
-    bg: `hsl(${hue}, 50%, 14%)`,
-    text: `hsl(${hue}, 95%, 85%)`,
-    border: `hsl(${hue}, 60%, 35%)`
-  };
-}
+    /**
+     * Deterministic Hue Generation for Token Chips
+     */
+    function getTokenPalette(id) {
+      const hue = (id * 53) % 360;
+      return {
+        bg: `hsl(${hue}, 50%, 14%)`,
+        text: `hsl(${hue}, 95%, 85%)`,
+        border: `hsl(${hue}, 60%, 35%)`
+      };
+    }
 
-/**
- * Tokenize Button Click Event
- */
-function tokenizeSentence() {
-  if (vocabRegistry === null) buildVocabulary();
-  const rawInput = document.getElementById("encode-input").value;
-  const tokens = encodeSentenceToTokens(rawInput);
+    /**
+     * Tokenize Button Click Event
+     */
+    function tokenizeSentence() {
+      if (vocabRegistry === null) buildVocabulary();
+      const rawInput = document.getElementById("encode-input").value;
+      const tokens = encodeSentenceToTokens(rawInput);
 
-  // Render Chips
-  let chipsHtml = "";
-  tokens.forEach((tok, index) => {
-    const col = getTokenPalette(tok.id);
-    chipsHtml += `
-      <div class="token-chip" style="background:${col.bg}; border-color:${col.border};" onclick="inspectToken(${tok.id}, '${escapeHtml(tok.text)}')">
+      // Render Chips
+      let chipsHtml = "";
+      tokens.forEach((tok, index) => {
+        const col = getTokenPalette(tok.id);
+        chipsHtml += `
+      <div class="token-chip" style="background:${col.bg}; border-color:${col.border};" onclick="inspectToken(${tok.id}, decodeURIComponent('${encodeURIComponent(tok.text)}'))">
         <span class="token-str" style="color:${col.text};">${escapeHtml(tok.text)}</span>
         <span class="token-idx" style="color:${col.text};">#${tok.id}</span>
       </div>`;
-  });
+      });
 
-  const totalChars = rawInput.length;
-  const compressionRatio = tokens.length ? (totalChars / tokens.length).toFixed(2) : "0";
+      const totalChars = rawInput.length;
+      const compressionRatio = tokens.length ? (totalChars / tokens.length).toFixed(2) : "0";
 
-  document.getElementById("token-output").innerHTML = `
+      document.getElementById("token-output").innerHTML = `
     <div class="token-stream">${chipsHtml}</div>
     <div class="metric-tiles">
       <div class="tile">
@@ -1019,84 +1111,87 @@ function tokenizeSentence() {
       </div>
     </div>`;
 
-  // Render Detokenization (Reconstruction)
-  document.getElementById("detokenizer-panel").style.display = "block";
-  document.getElementById("detokenized-text").textContent = reconstructTextFromTokens(tokens);
+      // Render Detokenization (Reconstruction)
+      document.getElementById("detokenizer-panel").style.display = "block";
+      document.getElementById("detokenized-text").textContent = reconstructTextFromTokens(tokens);
 
-  // Render Next-Token Predictions
-  computeNextTokenDistribution(tokens);
-}
-
-/**
- * Detokenizes (reconstructs string by stripping '##' continuations)
- */
-function reconstructTextFromTokens(tokens) {
-  let reconstructed = "";
-  for (const t of tokens) {
-    if (t.text.startsWith("##")) {
-      reconstructed += t.text.slice(2);
-    } else if (/^[.,!?;:]$/.test(t.text)) {
-      reconstructed += t.text;
-    } else {
-      reconstructed += (reconstructed.length > 0 ? " " : "") + t.text;
+      // Render Next-Token Predictions
+      computeNextTokenDistribution(tokens);
     }
-  }
-  return reconstructed;
-}
 
-/**
- * Click-to-inspect specific Token Details
- */
-function inspectToken(id, text) {
-  const inspector = document.getElementById("token-inspector");
-  const content = document.getElementById("inspector-content");
-  inspector.style.display = "block";
+    /**
+     * Detokenizes (reconstructs string by stripping '##' continuations)
+     */
+    function reconstructTextFromTokens(tokens) {
+      let reconstructed = "";
+      for (const t of tokens) {
+        if (t.text.startsWith("##")) {
+          reconstructed += t.text.slice(2);
+        } else if (/^[.,!?;:]$/.test(t.text)) {
+          reconstructed += t.text;
+        } else {
+          reconstructed += (reconstructed.length > 0 ? " " : "") + t.text;
+        }
+      }
+      return reconstructed;
+    }
 
-  const hexBytes = Array.from(new TextEncoder().encode(text)).map(b => "0x" + b.toString(16).toUpperCase()).join(" ");
+    /**
+     * Click-to-inspect specific Token Details
+     */
+    function inspectToken(id, text) {
+      const inspector = document.getElementById("token-inspector");
+      const content = document.getElementById("inspector-content");
+      inspector.style.display = "block";
 
-  content.innerHTML = `
+      const hexBytes = Array.from(new TextEncoder().encode(text)).map(b => "0x" + b.toString(16).toUpperCase()).join(" ");
+
+      content.innerHTML = `
     <div class="inspector-row"><span>Token String:</span> <strong>${escapeHtml(text)}</strong></div>
     <div class="inspector-row"><span>Token ID:</span> <code>${id}</code> (Hex: <code>0x${id.toString(16).toUpperCase()}</code>)</div>
     <div class="inspector-row"><span>UTF-8 Hex Bytes:</span> <code>${hexBytes}</code></div>
     <div class="inspector-row"><span>Subword Piece:</span> <span>${text.startsWith("##") ? "Yes (Continuation)" : "No (Standalone/Root)"}</span></div>
   `;
-}
+    }
 
-/**
- * Next-Token Probability Simulator (Bigram Transitions)
- */
-function computeNextTokenDistribution(tokens) {
-  const container = document.getElementById("next-token-probs");
-  if (!tokens.length) {
-    container.innerHTML = "<p class='subtle-hint'>Type text to simulate generation.</p>";
-    return;
-  }
+    /**
+     * Next-Token Probability Simulator (Bigram Transitions)
+     */
+    function computeNextTokenDistribution(tokens) {
+      const container = document.getElementById("next-token-probs");
+      if (!tokens.length) {
+        container.innerHTML = "<p class='subtle-hint'>Type text to simulate generation.</p>";
+        return;
+      }
 
-  const lastToken = tokens[tokens.length - 1].text.toLowerCase();
-  const candidates = bigramTransitions[lastToken];
+      let targetToken = tokens[tokens.length - 1].text.toLowerCase();
+      if (/^[.,!?;:]$/.test(targetToken) && tokens.length > 1) {
+        targetToken = tokens[tokens.length - 2].text.toLowerCase();
+      }
+      const candidates = bigramTransitions[targetToken];
 
-  if (!candidates) {
-    // If no exact match, fallback to top frequent unigrams
-    container.innerHTML = `<p class="subtle-hint">No direct corpus transition recorded after '<code>${escapeHtml(lastToken)}</code>'. Showing baseline vocabulary unigrams:</p>`;
-    renderProbBars(frequencyList.slice(0, 3).map(w => ({ word: w, prob: (unigramCounts[w] / Object.keys(unigramCounts).length) })));
-    return;
-  }
+      if (!candidates) {
+        // If no exact match, fallback to top frequent unigrams
+        container.innerHTML = `<p class="subtle-hint">No direct corpus transition recorded after '<code>${escapeHtml(targetToken)}</code>'. Showing baseline vocabulary unigrams:</p>`;
+        renderProbBars(frequencyList.slice(0, 3).map(w => ({ word: w, prob: (unigramCounts[w] / Object.keys(unigramCounts).length) })));
+        return;
+      }
 
-  const total = Object.values(candidates).reduce((a, b) => a + b, 0);
-  const sorted = Object.keys(candidates)
-    .map(w => ({ word: w, prob: candidates[w] / total }))
-    .sort((a, b) => b.prob - a.prob)
-    .slice(0, 3);
+      const total = Object.values(candidates).reduce((a, b) => a + b, 0);
+      const sorted = Object.keys(candidates)
+        .map(w => ({ word: w, prob: candidates[w] / total }))
+        .sort((a, b) => b.prob - a.prob)
+        .slice(0, 3);
 
-  renderProbBars(sorted);
-}
+      renderProbBars(sorted);
+    }
 
-function renderProbBars(list) {
-  const container = document.getElementById("next-token-probs");
-  let html = "";
-  list.forEach(item => {
-    const pct = (item.prob * 100).toFixed(1);
-    html += `
+    function renderProbBars(list) {
+      const container = document.getElementById("next-token-probs");
+      let html = "";
+      list.forEach(item => {
+        const pct = (item.prob * 100).toFixed(1);
+        html += `
       <div class="prob-item">
         <span class="prob-token">${escapeHtml(item.word)}</span>
         <div class="prob-bar-bg">
@@ -1104,170 +1199,173 @@ function renderProbBars(list) {
         </div>
         <span class="prob-pct">${pct}%</span>
       </div>`;
-  });
-  container.innerHTML = html;
-}
-
-function generateNextToken() {
-  const input = document.getElementById("encode-input");
-  const tokens = encodeSentenceToTokens(input.value);
-  if (!tokens.length) return;
-
-  const lastToken = tokens[tokens.length - 1].text.toLowerCase();
-  const candidates = bigramTransitions[lastToken];
-
-  if (candidates) {
-    const nextW = Object.keys(candidates).sort((a, b) => candidates[b] - candidates[a])[0];
-    input.value = input.value.trimEnd() + " " + nextW;
-  } else if (frequencyList.length) {
-    input.value = input.value.trimEnd() + " " + frequencyList[0];
-  }
-  tokenizeSentence();
-}
-
-/**
- * =====================================================================
- * EMBEDDING & PCA 3D ENGINE
- * =====================================================================
- */
-function hashTrigram(str) {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) {
-    h = (h * 37 + str.charCodeAt(i)) >>> 0;
-  }
-  return h;
-}
-
-function normalizeVectorL2(vec) {
-  const norm = Math.sqrt(vec.reduce((sum, val) => sum + val * val, 0)) || 1;
-  return vec.map(v => v / norm);
-}
-
-function computeTrigramEmbedding(sentence) {
-  const lower = sentence.toLowerCase();
-  const vector = new Array(64).fill(0);
-  for (let i = 0; i + 3 <= lower.length; i++) {
-    const chunk = lower.slice(i, i + 3);
-    vector[hashTrigram(chunk) % 64] += 1;
-  }
-  return normalizeVectorL2(vector);
-}
-
-function computeDotProduct(u, v) {
-  let acc = 0;
-  for (let i = 0; i < u.length; i++) acc += u[i] * v[i];
-  return acc;
-}
-
-function calculateCosineSimilarity(u, v) {
-  return computeDotProduct(u, v) / (Math.sqrt(computeDotProduct(u, u)) * Math.sqrt(computeDotProduct(v, v)) || 1);
-}
-
-/**
- * Power Iteration with Matrix Deflation for PCA (64D -> 3D)
- */
-function performPCA3D(vectors) {
-  const N = vectors.length;
-  const D = vectors[0].length;
-
-  // Mean Centering
-  const meanVector = new Array(D).fill(0);
-  for (const vec of vectors) {
-    for (let j = 0; j < D; j++) meanVector[j] += vec[j] / N;
-  }
-  const centered = vectors.map(vec => vec.map((val, j) => val - meanVector[j]));
-
-  // Covariance Matrix
-  const cov = [];
-  for (let a = 0; a < D; a++) {
-    cov.push(new Array(D).fill(0));
-    for (let b = 0; b < D; b++) {
-      for (let i = 0; i < N; i++) cov[a][b] += centered[i][a] * centered[i][b];
-      cov[a][b] /= (N - 1);
+      });
+      container.innerHTML = html;
     }
-  }
 
-  // Deflation Power Iteration
-  const eigenvectors = [];
-  for (let k = 0; k < 3; k++) {
-    let q = normalizeVectorL2(Array.from({ length: D }, (_, idx) => Math.sin(idx + 1 + k * 2)));
-    for (let step = 0; step < 45; step++) {
-      q = normalizeVectorL2(cov.map(row => computeDotProduct(row, q)));
+    function generateNextToken() {
+      const input = document.getElementById("encode-input");
+      const tokens = encodeSentenceToTokens(input.value);
+      if (!tokens.length) return;
+
+      let lastToken = tokens[tokens.length - 1].text.toLowerCase();
+      if (/^[.,!?;:]$/.test(lastToken) && tokens.length > 1) {
+        lastToken = tokens[tokens.length - 2].text.toLowerCase();
+      }
+      const candidates = bigramTransitions[lastToken];
+
+      if (candidates) {
+        const nextW = Object.keys(candidates).sort((a, b) => candidates[b] - candidates[a])[0];
+        input.value = input.value.trimEnd() + " " + nextW;
+      } else if (frequencyList.length) {
+        input.value = input.value.trimEnd() + " " + frequencyList[0];
+      }
+      tokenizeSentence();
     }
-    const eigenvalue = computeDotProduct(q, cov.map(row => computeDotProduct(row, q)));
-    eigenvectors.push(q);
 
-    // Deflate
-    for (let a = 0; a < D; a++) {
-      for (let b = 0; b < D; b++) cov[a][b] -= eigenvalue * q[a] * q[b];
+    /**
+     * =====================================================================
+     * EMBEDDING & PCA 3D ENGINE
+     * =====================================================================
+     */
+    function hashTrigram(str) {
+      let h = 0;
+      for (let i = 0; i < str.length; i++) {
+        h = (h * 37 + str.charCodeAt(i)) >>> 0;
+      }
+      return h;
     }
-  }
 
-  // Project onto 3 Principal Components
-  return centered.map(x => eigenvectors.map(eigen => computeDotProduct(x, eigen)));
-}
+    function normalizeVectorL2(vec) {
+      const norm = Math.sqrt(vec.reduce((sum, val) => sum + val * val, 0)) || 1;
+      return vec.map(v => v / norm);
+    }
 
-/**
- * Draws 3D Scatter Plot with Plotly WebGL
- */
-function render3DScatter(points, sentenceList) {
-  if (typeof Plotly === "undefined") {
-    document.getElementById("plot").innerHTML = `
+    function computeTrigramEmbedding(sentence) {
+      const lower = sentence.toLowerCase();
+      const vector = new Array(64).fill(0);
+      for (let i = 0; i + 3 <= lower.length; i++) {
+        const chunk = lower.slice(i, i + 3);
+        vector[hashTrigram(chunk) % 64] += 1;
+      }
+      return normalizeVectorL2(vector);
+    }
+
+    function computeDotProduct(u, v) {
+      let acc = 0;
+      for (let i = 0; i < u.length; i++) acc += u[i] * v[i];
+      return acc;
+    }
+
+    function calculateCosineSimilarity(u, v) {
+      return computeDotProduct(u, v) / (Math.sqrt(computeDotProduct(u, u)) * Math.sqrt(computeDotProduct(v, v)) || 1);
+    }
+
+    /**
+     * Power Iteration with Matrix Deflation for PCA (64D -> 3D)
+     */
+    function performPCA3D(vectors) {
+      const N = vectors.length;
+      const D = vectors[0].length;
+
+      // Mean Centering
+      const meanVector = new Array(D).fill(0);
+      for (const vec of vectors) {
+        for (let j = 0; j < D; j++) meanVector[j] += vec[j] / N;
+      }
+      const centered = vectors.map(vec => vec.map((val, j) => val - meanVector[j]));
+
+      // Covariance Matrix
+      const cov = [];
+      for (let a = 0; a < D; a++) {
+        cov.push(new Array(D).fill(0));
+        for (let b = 0; b < D; b++) {
+          for (let i = 0; i < N; i++) cov[a][b] += centered[i][a] * centered[i][b];
+          cov[a][b] /= (N - 1);
+        }
+      }
+
+      // Deflation Power Iteration
+      const eigenvectors = [];
+      for (let k = 0; k < 3; k++) {
+        let q = normalizeVectorL2(Array.from({ length: D }, (_, idx) => Math.sin(idx + 1 + k * 2)));
+        for (let step = 0; step < 45; step++) {
+          q = normalizeVectorL2(cov.map(row => computeDotProduct(row, q)));
+        }
+        const eigenvalue = computeDotProduct(q, cov.map(row => computeDotProduct(row, q)));
+        eigenvectors.push(q);
+
+        // Deflate
+        for (let a = 0; a < D; a++) {
+          for (let b = 0; b < D; b++) cov[a][b] -= eigenvalue * q[a] * q[b];
+        }
+      }
+
+      // Project onto 3 Principal Components
+      return centered.map(x => eigenvectors.map(eigen => computeDotProduct(x, eigen)));
+    }
+
+    /**
+     * Draws 3D Scatter Plot with Plotly WebGL
+     */
+    function render3DScatter(points, sentenceList) {
+      if (typeof Plotly === "undefined") {
+        document.getElementById("plot").innerHTML = `
       <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:var(--text-dim);">
         <p>Plotly 3D visualizer is loading from CDN. Please verify internet access.</p>
       </div>`;
-    return;
-  }
-
-  const trace = {
-    type: "scatter3d",
-    mode: "markers+text",
-    x: points.map(p => p[0]),
-    y: points.map(p => p[1]),
-    z: points.map(p => p[2]),
-    text: sentenceList.map(s => s.length > 22 ? s.slice(0, 22) + "…" : s),
-    hovertext: sentenceList,
-    hoverinfo: "text",
-    textposition: "top center",
-    textfont: { family: "sans-serif", size: 11, color: "#94a3b8" },
-    marker: {
-      size: sentenceList.map(s => s === userQueryString ? 11 : 6),
-      color: sentenceList.map(s => s === userQueryString ? "#f59e0b" : "#6366f1"),
-      opacity: 0.9,
-      line: {
-        color: sentenceList.map(s => s === userQueryString ? "#fff" : "#818cf8"),
-        width: sentenceList.map(s => s === userQueryString ? 2.5 : 1)
+        return;
       }
+
+      const trace = {
+        type: "scatter3d",
+        mode: "markers+text",
+        x: points.map(p => p[0]),
+        y: points.map(p => p[1]),
+        z: points.map(p => p[2]),
+        text: sentenceList.map(s => s.length > 22 ? s.slice(0, 22) + "…" : s),
+        hovertext: sentenceList,
+        hoverinfo: "text",
+        textposition: "top center",
+        textfont: { family: "sans-serif", size: 11, color: "#94a3b8" },
+        marker: {
+          size: sentenceList.map(s => s === userQueryString ? 11 : 6),
+          color: sentenceList.map(s => s === userQueryString ? "#f59e0b" : "#6366f1"),
+          opacity: 0.9,
+          line: {
+            color: sentenceList.map(s => s === userQueryString ? "#fff" : "#818cf8"),
+            width: sentenceList.map(s => s === userQueryString ? 2.5 : 1)
+          }
+        }
+      };
+
+      const layout = {
+        margin: { l: 0, r: 0, t: 0, b: 0 },
+        paper_bgcolor: "rgba(0,0,0,0)",
+        plot_bgcolor: "rgba(0,0,0,0)",
+        scene: {
+          xaxis: { title: "PC1", color: "#94a3b8", gridcolor: "#1e293b", backgroundcolor: "rgba(15, 23, 42, 0.4)" },
+          yaxis: { title: "PC2", color: "#94a3b8", gridcolor: "#1e293b", backgroundcolor: "rgba(15, 23, 42, 0.4)" },
+          zaxis: { title: "PC3", color: "#94a3b8", gridcolor: "#1e293b", backgroundcolor: "rgba(15, 23, 42, 0.4)" }
+        }
+      };
+
+      Plotly.newPlot("plot", [trace], layout, { responsive: true, displayModeBar: false });
     }
-  };
 
-  const layout = {
-    margin: { l: 0, r: 0, t: 0, b: 0 },
-    paper_bgcolor: "rgba(0,0,0,0)",
-    plot_bgcolor: "rgba(0,0,0,0)",
-    scene: {
-      xaxis: { title: "PC1", color: "#94a3b8", gridcolor: "#1e293b", backgroundcolor: "rgba(15, 23, 42, 0.4)" },
-      yaxis: { title: "PC2", color: "#94a3b8", gridcolor: "#1e293b", backgroundcolor: "rgba(15, 23, 42, 0.4)" },
-      zaxis: { title: "PC3", color: "#94a3b8", gridcolor: "#1e293b", backgroundcolor: "rgba(15, 23, 42, 0.4)" }
-    }
-  };
+    function renderTopCosinePairs(vectors, sentences) {
+      const pairs = [];
+      for (let i = 0; i < vectors.length; i++) {
+        for (let j = i + 1; j < vectors.length; j++) {
+          pairs.push({ a: sentences[i], b: sentences[j], sim: calculateCosineSimilarity(vectors[i], vectors[j]) });
+        }
+      }
+      pairs.sort((p1, p2) => p2.sim - p1.sim);
 
-  Plotly.newPlot("plot", [trace], layout, { responsive: true, displayModeBar: false });
-}
-
-function renderTopCosinePairs(vectors, sentences) {
-  const pairs = [];
-  for (let i = 0; i < vectors.length; i++) {
-    for (let j = i + 1; j < vectors.length; j++) {
-      pairs.push({ a: sentences[i], b: sentences[j], sim: calculateCosineSimilarity(vectors[i], vectors[j]) });
-    }
-  }
-  pairs.sort((p1, p2) => p2.sim - p1.sim);
-
-  let rows = "";
-  for (const item of pairs.slice(0, 5)) {
-    const fillPercent = Math.max(0, Math.min(100, item.sim * 100)).toFixed(0);
-    rows += `
+      let rows = "";
+      for (const item of pairs.slice(0, 5)) {
+        const fillPercent = Math.max(0, Math.min(100, item.sim * 100)).toFixed(0);
+        rows += `
       <tr>
         <td>${escapeHtml(item.a)}</td>
         <td>${escapeHtml(item.b)}</td>
@@ -1278,9 +1376,9 @@ function renderTopCosinePairs(vectors, sentences) {
           </div>
         </td>
       </tr>`;
-  }
+      }
 
-  document.getElementById("pairs-output").innerHTML = `
+      document.getElementById("pairs-output").innerHTML = `
     <h3 style="font-size:14px; margin-bottom:10px; color:#fff;">✨ Top 5 Closest Sentence Pairs (Cosine Distance)</h3>
     <div class="table-scroll">
       <table>
@@ -1288,80 +1386,80 @@ function renderTopCosinePairs(vectors, sentences) {
         ${rows}
       </table>
     </div>`;
-}
+    }
 
-async function embedAndPlot() {
-  const statusDiv = document.getElementById("embed-status");
-  statusDiv.textContent = "";
+    async function embedAndPlot() {
+      const statusDiv = document.getElementById("embed-status");
+      statusDiv.textContent = "";
 
-  const sentences = document.getElementById("sentences").value
-    .split("\n")
-    .map(s => s.trim())
-    .filter(s => s.length > 0);
+      const sentences = document.getElementById("sentences").value
+        .split("\n")
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
 
-  if (sentences.length < 4) {
-    statusDiv.textContent = "Please input at least 4 sentences to perform PCA.";
-    return;
-  }
+      if (sentences.length < 4) {
+        statusDiv.textContent = "Please input at least 4 sentences to perform PCA.";
+        return;
+      }
 
-  const embeddingVectors = sentences.map(computeTrigramEmbedding);
-  const coordinates3D = performPCA3D(embeddingVectors);
+      const embeddingVectors = sentences.map(computeTrigramEmbedding);
+      const coordinates3D = performPCA3D(embeddingVectors);
 
-  render3DScatter(coordinates3D, sentences);
-  renderTopCosinePairs(embeddingVectors, sentences);
+      render3DScatter(coordinates3D, sentences);
+      renderTopCosinePairs(embeddingVectors, sentences);
 
-  if (sentences.includes(userQueryString)) {
-    renderUserFollowDetails(embeddingVectors, sentences);
-  }
-}
+      if (sentences.includes(userQueryString)) {
+        renderUserFollowDetails(embeddingVectors, sentences);
+      }
+    }
 
-/**
- * Custom Word/Sentence Tracking Flow
- */
-async function addUserWord() {
-  const inputElem = document.getElementById("new-word");
-  const query = inputElem.value.trim();
-  if (!query) return;
+    /**
+     * Custom Word/Sentence Tracking Flow
+     */
+    async function addUserWord() {
+      const inputElem = document.getElementById("new-word");
+      const query = inputElem.value.trim();
+      if (!query) return;
 
-  if (!vocabRegistry) buildVocabulary();
+      if (!vocabRegistry) buildVocabulary();
 
-  const tokenList = encodeSentenceToTokens(query);
-  let chips = "";
-  tokenList.forEach(t => {
-    const col = getTokenPalette(t.id);
-    chips += `<div class="token-chip" style="background:${col.bg}; border-color:${col.border};"><span class="token-str" style="color:${col.text};">${escapeHtml(t.text)}</span><span class="token-idx" style="color:${col.text};">#${t.id}</span></div>`;
-  });
+      const tokenList = encodeSentenceToTokens(query);
+      let chips = "";
+      tokenList.forEach(t => {
+        const col = getTokenPalette(t.id);
+        chips += `<div class="token-chip" style="background:${col.bg}; border-color:${col.border};" onclick="inspectToken(${t.id}, decodeURIComponent('${encodeURIComponent(t.text)}'))"><span class="token-str" style="color:${col.text};">${escapeHtml(t.text)}</span><span class="token-idx" style="color:${col.text};">#${t.id}</span></div>`;
+      });
 
-  document.getElementById("new-word-output").innerHTML = `
+      document.getElementById("new-word-output").innerHTML = `
     <div style="background:var(--bg-surface-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); padding:16px; margin-top:14px;">
       <p style="font-size:11.5px; font-weight:700; color:var(--text-dim); text-transform:uppercase;">Step 1: Subword Token Decomposition</p>
       <div class="token-stream" style="margin:8px 0;">${chips}</div>
       <div id="new-word-vector-box"></div>
     </div>`;
 
-  const sentenceBox = document.getElementById("sentences");
-  const lines = sentenceBox.value.split("\n").map(l => l.trim());
-  if (!lines.includes(query)) {
-    sentenceBox.value = sentenceBox.value.trimEnd() + "\n" + query;
-  }
-  userQueryString = query;
-  await embedAndPlot();
-}
+      const sentenceBox = document.getElementById("sentences");
+      const lines = sentenceBox.value.split("\n").map(l => l.trim());
+      if (!lines.includes(query)) {
+        sentenceBox.value = sentenceBox.value.trimEnd() + "\n" + query;
+      }
+      userQueryString = query;
+      await embedAndPlot();
+    }
 
-function renderUserFollowDetails(vectors, sentences) {
-  const idx = sentences.indexOf(userQueryString);
-  const myVec = vectors[idx];
+    function renderUserFollowDetails(vectors, sentences) {
+      const idx = sentences.indexOf(userQueryString);
+      const myVec = vectors[idx];
 
-  const neighbors = sentences
-    .map((s, i) => ({ text: s, score: calculateCosineSimilarity(myVec, vectors[i]) }))
-    .filter((_, i) => i !== idx)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
+      const neighbors = sentences
+        .map((s, i) => ({ text: s, score: calculateCosineSimilarity(myVec, vectors[i]) }))
+        .filter((_, i) => i !== idx)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3);
 
-  let neighborRows = "";
-  neighbors.forEach(n => {
-    const pct = (n.score * 100).toFixed(0);
-    neighborRows += `
+      let neighborRows = "";
+      neighbors.forEach(n => {
+        const pct = (n.score * 100).toFixed(0);
+        neighborRows += `
       <tr>
         <td>${escapeHtml(n.text)}</td>
         <td>
@@ -1371,9 +1469,9 @@ function renderUserFollowDetails(vectors, sentences) {
           </div>
         </td>
       </tr>`;
-  });
+      });
 
-  document.getElementById("new-word-vector-box").innerHTML = `
+      document.getElementById("new-word-vector-box").innerHTML = `
     <div style="margin-top:12px;">
       <p style="font-size:11.5px; font-weight:700; color:var(--text-dim); text-transform:uppercase;">Step 2: 64D Embedding Vector (Sample Values)</p>
       <code style="display:block; margin-top:4px; font-size:11.5px; line-height:1.5;">[${myVec.slice(0, 8).map(x => x.toFixed(3)).join(", ")}, …]</code>
@@ -1387,50 +1485,56 @@ function renderUserFollowDetails(vectors, sentences) {
         </table>
       </div>
     </div>`;
-}
+    }
 
-function exportVocabJSON() {
-  if (!vocabRegistry) buildVocabulary();
-  const blob = new Blob([JSON.stringify(vocabRegistry, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "vocabulary.json";
-  a.click();
-  URL.revokeObjectURL(url);
-}
+    function exportVocabJSON() {
+      if (!vocabRegistry) buildVocabulary();
+      const blob = new Blob([JSON.stringify(vocabRegistry, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "vocabulary.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
 
-function escapeHtml(str) {
-  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
 
-/**
- * =====================================================================
- * ATTACH LISTENERS & AUTO-INIT
- * =====================================================================
- */
-document.getElementById("build-vocab-btn").addEventListener("click", buildVocabulary);
-document.getElementById("tokenize-btn").addEventListener("click", tokenizeSentence);
+    /**
+     * =====================================================================
+     * ATTACH LISTENERS & AUTO-INIT
+     * =====================================================================
+     */
+    document.getElementById("build-vocab-btn").addEventListener("click", buildVocabulary);
+    document.getElementById("tokenize-btn").addEventListener("click", tokenizeSentence);
 
-document.getElementById("vocab-slider").addEventListener("input", function() {
-  applyVocabSize(Number(this.value));
-  if (document.getElementById("token-output").innerHTML !== "") {
-    tokenizeSentence();
-  }
-});
+    document.getElementById("vocab-slider").addEventListener("input", function () {
+      applyVocabSize(Number(this.value));
+      if (document.getElementById("token-output").innerHTML !== "") {
+        tokenizeSentence();
+      }
+    });
 
-document.getElementById("embed-btn").addEventListener("click", embedAndPlot);
-document.getElementById("add-word-btn").addEventListener("click", addUserWord);
-document.getElementById("new-word").addEventListener("keydown", e => {
-  if (e.key === "Enter") addUserWord();
-});
+    document.getElementById("embed-btn").addEventListener("click", embedAndPlot);
+    document.getElementById("add-word-btn").addEventListener("click", addUserWord);
+    document.getElementById("new-word").addEventListener("keydown", e => {
+      if (e.key === "Enter") addUserWord();
+    });
 
-// Auto-run on load
-window.addEventListener("DOMContentLoaded", () => {
-  buildVocabulary();
-  tokenizeSentence();
-  embedAndPlot();
-});
-</script>
+    // Auto-run on load
+    window.addEventListener("DOMContentLoaded", () => {
+      buildVocabulary();
+      tokenizeSentence();
+      embedAndPlot();
+    });
+  </script>
 </body>
+
 </html>
